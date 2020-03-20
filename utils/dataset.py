@@ -31,7 +31,7 @@ class RandomImbalancedSampler(Sampler):
 
 class TextToSpeechDataset(Dataset):
     def __init__(self, data_path, metadata):
-        self.items = [{'id' : x[0], 'language' : x[1]} for x in metadata]
+        self.items = [{'id' : x[0], 'language' : x[2]} for x in metadata]
         self.mel_path = os.path.join(data_path, "mel")
         self.quant_path = os.path.join(data_path, "quant")
 

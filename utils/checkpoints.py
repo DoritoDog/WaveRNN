@@ -9,7 +9,7 @@ def get_checkpoint_paths(paths: Paths):
     """
     weights_path = paths.voc_latest_weights
     optim_path = paths.voc_latest_optim
-    scheduler_path = paths.voc_latest_optim
+    scheduler_path = paths.voc_latest_scheduler
     checkpoint_path = paths.voc_checkpoints
     
     return weights_path, optim_path, scheduler_path, checkpoint_path
@@ -33,11 +33,11 @@ def save_checkpoint(paths: Paths, model, optimizer, scheduler, *,
         s = 'named' if is_named else 'latest'
         num_exist = sum(p.exists() for p in path_dict.values())
 
-        if num_exist not in (0,2):
-            # Checkpoint broken
-            raise FileNotFoundError(
-                f'We expected either both or no files in the {s} checkpoint to '
-                'exist, but instead we got exactly one!')
+        #if num_exist not in (0,2):
+        #    # Checkpoint broken
+        #    raise FileNotFoundError(
+        #        f'We expected either both or no files in the {s} checkpoint to '
+        #        'exist, but instead we got exactly one!')
 
         if num_exist == 0:
             if not is_silent: print(f'Creating {s} checkpoint...')
@@ -50,7 +50,7 @@ def save_checkpoint(paths: Paths, model, optimizer, scheduler, *,
         model.save(path_dict['w'])
         if not is_silent: print(f'Saving {s} optimizer state: {path_dict["o"]}')
         torch.save(optimizer.state_dict(), path_dict['o'])
-        torch.save(scheduler.state_dict(), path_dict['o'])
+        torch.save(scheduler.state_dict(), path_dict['s'])
 
     weights_path, optim_path, scheduler_path, checkpoint_path = get_checkpoint_paths(paths)
 
