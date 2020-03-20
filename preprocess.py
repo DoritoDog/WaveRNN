@@ -24,20 +24,22 @@ def process_data(data_root, data_dirs, output_path):
     """
 
     dataset = []
-    
+   
+    c = 1
     for d in data_dirs:
         wav_d = os.path.join(data_root, d, "wavs")
         all_files = [os.path.splitext(f)[0] for f in os.listdir(wav_d)]
 
         for i, f in enumerate(all_files):
-            file_id = '{:d}'.format(i).zfill(5)
+            file_id = '{:d}'.format(c).zfill(5)
             wav = convert_file(os.path.join(wav_d, f + ".wav"))
             mel = np.load(os.path.join(data_root, d, "gtas", f + ".npy"))
             mel = normalize(mel)
             np.save(os.path.join(output_path, "mel", file_id + ".npy"), mel, allow_pickle=False)
             np.save(os.path.join(output_path, "quant", file_id + ".npy"), wav, allow_pickle=False) 
             dataset.append((file_id, mel.shape[-1], os.path.basename(d)))
-
+            c += 1
+    
     # save dataset
     with open(os.path.join(output_path, 'dataset.pkl'), 'wb') as f:
         pickle.dump(dataset, f)

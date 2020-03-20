@@ -17,8 +17,8 @@ from utils.checkpoints import save_checkpoint, restore_checkpoint
 def voc_train_loop(paths: Paths, model: WaveRNN, loss_func, optimizer, scheduler, train_set, test_set, total_steps):
 
     def get_lr(optimizer):
-    for param_group in optimizer.param_groups:
-        return param_group['lr']
+        for param_group in optimizer.param_groups:
+            return param_group['lr']
 
     device = next(model.parameters()).device
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
     
     paths = Paths(hp.data_path, hp.voc_model_id)
 
-    if not args.force_cpu and torch.cuda.is_available():
+    if torch.cuda.is_available():
         device = torch.device('cuda')
         if batch_size % torch.cuda.device_count() != 0:
             raise ValueError('`batch_size` must be evenly divisible by n_gpus!')
