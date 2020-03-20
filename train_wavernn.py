@@ -33,7 +33,7 @@ def main():
     if args.batch_size is None:
         args.batch_size = hp.voc_batch_size
 
-    paths = Paths(hp.data_path, hp.voc_model_id, hp.tts_model_id)
+    paths = Paths(hp.data_path, hp.voc_model_id, "")
 
     batch_size = args.batch_size
     force_train = args.force_train

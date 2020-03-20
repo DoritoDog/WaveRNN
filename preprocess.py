@@ -1,99 +1,80 @@
-import glob
-from utils.display import *
-from utils.dsp import *
+import os
+from utils.dsp import melspectrogram, load_wav, normalize, float_2_label, encode_mu_law
 from utils import hparams as hp
-from multiprocessing import Pool, cpu_count
-from utils.paths import Paths
 import pickle
-import argparse
-from utils.text.recipes import ljspeech
-from utils.files import get_files
-from pathlib import Path
+import numpy as np
 
 
-# Helper functions for argument types
-def valid_n_workers(num):
-    n = int(num)
-    if n < 1:
-        raise argparse.ArgumentTypeError('%r must be an integer greater than 0' % num)
-    return n
-
-parser = argparse.ArgumentParser(description='Preprocessing for WaveRNN and Tacotron')
-parser.add_argument('--path', '-p', help='directly point to dataset path (overrides hparams.wav_path')
-parser.add_argument('--extension', '-e', metavar='EXT', default='.wav', help='file extension to search for in dataset folder')
-parser.add_argument('--num_workers', '-w', metavar='N', type=valid_n_workers, default=cpu_count()-1, help='The number of worker threads to use for preprocessing')
-parser.add_argument('--hp_file', metavar='FILE', default='hparams.py', help='The file to use for the hyperparameters')
-args = parser.parse_args()
-
-hp.configure(args.hp_file)  # Load hparams from file
-if args.path is None:
-    args.path = hp.wav_path
-
-extension = args.extension
-path = args.path
-
-
-def convert_file(path: Path):
+def convert_file(path):
     y = load_wav(path)
     peak = np.abs(y).max()
     if hp.peak_norm or peak > 1.0:
         y /= peak
     mel = melspectrogram(y)
+    mel = normalize(mel)
     if hp.voc_mode == 'RAW':
         quant = encode_mu_law(y, mu=2**hp.bits) if hp.mu_law else float_2_label(y, bits=hp.bits)
     elif hp.voc_mode == 'MOL':
         quant = float_2_label(y, bits=16)
-
     return mel.astype(np.float32), quant.astype(np.int64)
 
 
-def process_wav(path: Path):
-    wav_id = path.stem
+def process_wav(path):
     m, x = convert_file(path)
-    np.save(paths.mel/f'{wav_id}.npy', m, allow_pickle=False)
-    np.save(paths.quant/f'{wav_id}.npy', x, allow_pickle=False)
-    return wav_id, m.shape[-1]
+    return m, x
 
 
-wav_files = get_files(path, extension)
-paths = Paths(hp.data_path, hp.voc_model_id, hp.tts_model_id)
+def process_data(data_root, data_dirs, output_path):
+    """
+    Given language dependent directories and an output directory, 
+    process wav files and save quantized wav and mel.
+    """
 
-print(f'\n{len(wav_files)} {extension[1:]} files found in "{path}"\n')
-
-if len(wav_files) == 0:
-
-    print('Please point wav_path in hparams.py to your dataset,')
-    print('or use the --path option.\n')
-
-else:
-
-    if not hp.ignore_tts:
-
-        text_dict = ljspeech(path)
-
-        with open(paths.data/'text_dict.pkl', 'wb') as f:
-            pickle.dump(text_dict, f)
-
-    n_workers = max(1, args.num_workers)
-
-    simple_table([
-        ('Sample Rate', hp.sample_rate),
-        ('Bit Depth', hp.bits),
-        ('Mu Law', hp.mu_law),
-        ('Hop Length', hp.hop_length),
-        ('CPU Usage', f'{n_workers}/{cpu_count()}')
-    ])
-
-    pool = Pool(processes=n_workers)
     dataset = []
+    
+    for d in data_dirs:
+        wav_d = os.path.join(data_root, d, "wavs")
+        all_files = [os.path.splitext(f)[0] for f in os.listdir(wav_d)]
+        
+        for i, f in enumerate(all_files):
+            file_id = '{:d}'.format(i).zfill(5)
+            mel, wav = process_wav(os.path.join(data_root, d, f))
+            np.save(os.path.join(output_path, "mel", file_id + ".npy"), mel, allow_pickle=False)
+            np.save(os.path.join(output_path, "quant", file_id + ".npy"), wav, allow_pickle=False) 
+            dataset.append((file_id, mel.shape[-1], os.path.basename(d)))
 
-    for i, (item_id, length) in enumerate(pool.imap_unordered(process_wav, wav_files), 1):
-        dataset += [(item_id, length)]
-        bar = progbar(i, len(wav_files))
-        message = f'{bar} {i}/{len(wav_files)} '
-        stream(message)
-
-    with open(paths.data/'dataset.pkl', 'wb') as f:
+    # save dataset
+    with open(os.path.join(output_path, 'dataset.pkl'), 'wb') as f:
         pickle.dump(dataset, f)
+    
+    print(f"Preprocessing done, total processed wav files: {len(wav_files)}")
+    print(f"Processed files are located in:{os.path.abspath(output_path)}")
 
-    print('\n\nCompleted. Ready to run "python train_tacotron.py" or "python train_wavernn.py". \n')
+
+if __name__=="__main__":
+    import argparse
+    import re
+
+    parser = argparse.ArgumentParser(description='Preprocessing for WaveRNN and Tacotron')
+    parser.add_argument("--base_directory", type=str, default=".", help="Base directory of the project.")
+    parser.add_argument('--data_root', type=str, help='Directly point to dataset path (overrides hparams.data_path)')
+    parser.add_argument("--inputs", nargs='+', type=str, help="Names of input directories.", required=True)
+    parser.add_argument('--hp_file', type='str', default='hparams.py', help='The file to use for the hyperparameters')
+    parser.add_argument("--output", type=str, help="Output directory (overrides hparams.data_path).")
+    args = parser.parse_args()
+
+    hp.configure(args.hp_file)
+    if args.data_path is None:
+        args.data_path = hp.data_path
+    if args.output is None:
+        args.output = hp.data_path
+
+    output_dir = os.path.join(args.base_directory, args.output)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    output_quant_dir = os.path.join(args.base_directory, args.output, "quant")
+    if not os.path.exists(output_quant_dir):
+        os.makedirs(output_quant_dir)
+
+    process_data(args.data_root, args.inputs, output_dir)

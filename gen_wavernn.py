@@ -122,7 +122,7 @@ if __name__ == "__main__":
                     sample_rate=hp.sample_rate,
                     mode=hp.voc_mode).to(device)
 
-    paths = Paths(hp.data_path, hp.voc_model_id, hp.tts_model_id)
+    paths = Paths(hp.data_path, hp.voc_model_id, "")
 
     voc_weights = args.voc_weights if args.voc_weights else paths.voc_latest_weights
 
