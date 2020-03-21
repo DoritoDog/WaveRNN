@@ -49,8 +49,18 @@ def get_vocoder_datasets(path, batch_size):
 
     with open(os.path.join(path, 'dataset.pkl'), 'rb') as f:
         metadata = pickle.load(f)
-        test_metadata = metadata[-hp.voc_test_samples:]
-        train_metadata = metadata[:-hp.voc_test_samples]
+        languages = {}
+        train_metadata, test_metadata = [], []
+        for i, _, l in metadata:
+            add_train = False
+            if l in languages:
+                languages[l] += 1
+                add_train = languages[l] > hp.voc_test_samples // 10
+            else:
+                add_train = True
+                languages[l] = 0
+            if add_train: train_metadata += [(i, _, l)]
+            else: test_metadata += [(i, _, l)]
 
     train_dataset = TextToSpeechDataset(path, train_metadata)
     test_dataset = TextToSpeechDataset(path, test_metadata)

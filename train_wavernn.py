@@ -68,8 +68,7 @@ def voc_train_loop(paths: Paths, model: WaveRNN, loss_func, optimizer, scheduler
                 gen_testset(model, test_set, hp.voc_gen_at_checkpoint, hp.voc_gen_batched,
                             hp.voc_target, hp.voc_overlap, paths.voc_output)
                 ckpt_name = f'wave_step{k}K'
-                save_checkpoint('voc', paths, model, optimizer,
-                                name=ckpt_name, is_silent=True)
+                save_checkpoint(paths, model, optimizer, scheduler, name=ckpt_name, is_silent=True)
 
             msg = f'| Epoch: {e}/{epochs} ({i}/{total_iters}) | Loss: {avg_loss:.4f} | LR: {get_lr(optimizer):.4f} | {speed:.1f} steps/s | Step: {k}k | '
             stream(msg)
