@@ -35,20 +35,21 @@ def gen_testset(model: WaveRNN, test_set, samples, batched, target, overlap, sav
         _ = model.generate(m, save_str, batched, target, overlap, hp.mu_law)
 
 
-def gen_from_file(model: WaveRNN, load_path: Path, save_path: Path, batched, target, overlap):
-
-    mel = np.load(load_path)
-    mel = normalize(mel)
+def generate(model, spectrogram, batched, target, overlap, save_str=None):
+    mel = normalize(spectrogram)
     if mel.ndim != 2 or mel.shape[0] != hp.num_mels:
         raise ValueError(f'Expected a numpy array shaped (n_mels, n_hops), but got {wav.shape}!')
     _max = np.max(mel)
     _min = np.min(mel)
     if _max >= 1.01 or _min <= -0.01:
         raise ValueError(f'Expected spectrogram range in [0,1] but was instead [{_min}, {_max}]')
-
     mel = torch.tensor(mel).unsqueeze(0)
-    save_str = save_path
-    _ = model.generate(mel, save_str, batched, target, overlap, hp.mu_law)
+    return model.generate(mel, save_str, batched, target, overlap, hp.mu_law)
+
+
+def gen_from_file(model: WaveRNN, load_path: Path, save_path: Path, batched, target, overlap):
+    mel = np.load(load_path)
+    generate(model, mel, batched, target, overlap, save_str=save_path)
 
 
 if __name__ == "__main__":
@@ -85,7 +86,6 @@ if __name__ == "__main__":
     target = args.target
     overlap = args.overlap
     file = args.file
-    gta = args.gta
 
     if not args.force_cpu and torch.cuda.is_available():
         device = torch.device('cuda')
@@ -119,6 +119,6 @@ if __name__ == "__main__":
                   ('Overlap Samples', overlap if batched else 'N/A')])
 
     file = Path(file).expanduser()
-    gen_from_file(model, file, paths.voc_output, batched, target, overlap)
+    gen_from_file(model, file, args.output, batched, target, overlap)
     
     print('\n\nExiting...\n')
