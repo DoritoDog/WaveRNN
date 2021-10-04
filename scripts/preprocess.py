@@ -1,6 +1,6 @@
 import os
-from utils.dsp import melspectrogram, load_wav, normalize, float_2_label, encode_mu_law
-from utils import hparams as hp
+from wavernn.utils.dsp import load_wav, normalize, float_2_label, encode_mu_law
+from wavernn.utils import hparams as hp
 import pickle
 import numpy as np
 
@@ -50,7 +50,6 @@ def process_data(data_root, data_dirs, output_path):
 
 if __name__=="__main__":
     import argparse
-    import re
 
     parser = argparse.ArgumentParser(description='Preprocessing for WaveRNN and Tacotron')
     parser.add_argument("--base_directory", type=str, default=".", help="Base directory of the project.")

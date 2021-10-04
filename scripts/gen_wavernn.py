@@ -1,7 +1,7 @@
-from utils.dsp import *
-from models.fatchord_version import WaveRNN
-from utils.paths import Paths
-from utils.display import simple_table
+from wavernn.utils.dsp import *
+from wavernn.models.fatchord_version import WaveRNN
+from wavernn.utils.paths import Paths
+from wavernn.utils.display import simple_table
 import torch
 import argparse
 from pathlib import Path
