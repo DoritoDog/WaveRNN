@@ -1,7 +1,7 @@
 import math
 import numpy as np
 import librosa
-from utils import hparams as hp
+from wavernn.utils import hparams as hp
 from scipy.signal import lfilter
 
 

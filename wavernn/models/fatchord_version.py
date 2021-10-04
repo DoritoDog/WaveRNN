@@ -1,13 +1,13 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils.distribution import sample_from_discretized_mix_logistic
-from utils.display import *
-from utils.dsp import *
-import os
+from wavernn.utils.distribution import sample_from_discretized_mix_logistic
+from wavernn.utils.dsp import *
 import numpy as np
 from pathlib import Path
 from typing import Union
+from tqdm import tqdm
+import time
 
 
 class ResBlock(nn.Module):
@@ -94,6 +94,22 @@ class WaveRNN(nn.Module):
                  feat_dims, compute_dims, res_out_dims, res_blocks,
                  hop_length, sample_rate, mode='RAW'):
         super().__init__()
+
+        self.hparams = dict(
+            rnn_dims=rnn_dims,
+            fc_dims=fc_dims,
+            bits=bits,
+            pad=pad,
+            upsample_factors=upsample_factors,
+            feat_dims=feat_dims,
+            compute_dims=compute_dims,
+            res_out_dims=res_out_dims,
+            res_blocks=res_blocks,
+            hop_length=hop_length,
+            sample_rate=sample_rate,
+            mode=mode,
+        )
+
         self.mode = mode
         self.pad = pad
         if self.mode == 'RAW':
@@ -198,7 +214,7 @@ class WaveRNN(nn.Module):
             d = self.aux_dims
             aux_split = [aux[:, :, d * i:d * (i + 1)] for i in range(4)]
 
-            for i in range(seq_len):
+            for i in tqdm(range(seq_len)):
 
                 m_t = mels[:, i, :]
 
@@ -238,8 +254,6 @@ class WaveRNN(nn.Module):
                 else:
                     raise RuntimeError("Unknown model mode value - ", self.mode)
 
-                if i % 100 == 0: self.gen_display(i, seq_len, b_size, start)
-
         output = torch.stack(output).transpose(0, 1)
         output = output.cpu().numpy()
         output = output.astype(np.float64)
@@ -263,13 +277,6 @@ class WaveRNN(nn.Module):
         self.train()
 
         return output
-
-
-    def gen_display(self, i, seq_len, b_size, start):
-        gen_rate = (i + 1) / (time.time() - start) * b_size / 1000
-        pbar = progbar(i, seq_len)
-        msg = f'| {pbar} {i*b_size}/{seq_len*b_size} | Batch Size: {b_size} | Gen Rate: {gen_rate:.1f}kHz | '
-        stream(msg)
 
     def get_gru_cell(self, gru):
         gru_cell = nn.GRUCell(gru.input_size, gru.hidden_size)
@@ -412,16 +419,30 @@ class WaveRNN(nn.Module):
         with open(path, 'a') as f:
             print(msg, file=f)
 
+    @classmethod
+    def load_from_checkpoint(cls, path: Path, device: str = 'cpu'):
+        dct = torch.load(path, map_location=device)
+        hparams = dct["hparams"]
+        state_dict = dct["weights"]
+        model = WaveRNN(**hparams)
+        model.load_state_dict(state_dict, strict=False)
+        return model
+
     def load(self, path: Union[str, Path]):
         # Use device of model params as location for loaded state
         device = next(self.parameters()).device
-        self.load_state_dict(torch.load(path, map_location=device), strict=False)
+        dct = torch.load(path, map_location=device)
+        self.load_state_dict(dct["weights"], strict=False)
 
     def save(self, path: Union[str, Path]):
         # No optimizer argument because saving a model should not include data
         # only relevant in the training process - it should only be properties
         # of the model itself. Let caller take care of saving optimzier state.
-        torch.save(self.state_dict(), path)
+        dct = {
+            "hparams": self.hparams,
+            "weights": self.state_dict(),
+        }
+        torch.save(dct, path)
 
     def num_params(self, print_out=True):
         parameters = filter(lambda p: p.requires_grad, self.parameters())
@@ -434,3 +455,11 @@ class WaveRNN(nn.Module):
         """Calls `flatten_parameters` on all the rnns used by the WaveRNN. Used
         to improve efficiency and avoid PyTorch yelling at us."""
         [m.flatten_parameters() for m in self._to_flatten]
+
+    def inference(self, spectrogram, batched=True, n_samples_per_batch=11000, batch_overlap=550, mu_law=True):
+        mel = np.transpose(spectrogram, (1, 0))
+        mel = torch.tensor(mel).unsqueeze(0)
+        return self.generate(
+            mel, save_path=None, batched=batched, target=n_samples_per_batch,
+            overlap=batch_overlap, mu_law=mu_law
+        )

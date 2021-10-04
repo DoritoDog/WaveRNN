@@ -1,5 +1,5 @@
 import torch
-from utils.paths import Paths
+from wavernn.utils.paths import Paths
 
 
 def get_checkpoint_paths(paths: Paths):

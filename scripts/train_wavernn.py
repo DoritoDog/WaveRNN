@@ -3,15 +3,15 @@ import numpy as np
 import torch
 from torch import optim
 import torch.nn.functional as F
-from utils.display import stream, simple_table
-from utils.dataset import get_vocoder_datasets
-from utils.distribution import discretized_mix_logistic_loss
-from utils import hparams as hp
-from models.fatchord_version import WaveRNN
+from wavernn.utils.display import stream
+from wavernn.utils.dataset import get_vocoder_datasets
+from wavernn.utils.distribution import discretized_mix_logistic_loss
+from wavernn.utils import hparams as hp
+from wavernn.models.fatchord_version import WaveRNN
 from gen_wavernn import gen_testset
-from utils.paths import Paths
-from utils import data_parallel_workaround
-from utils.checkpoints import save_checkpoint, restore_checkpoint
+from wavernn.utils.paths import Paths
+from wavernn.utils import data_parallel_workaround
+from wavernn.utils.checkpoints import save_checkpoint, restore_checkpoint
 
 
 def voc_train_loop(paths: Paths, model: WaveRNN, loss_func, optimizer, scheduler, train_set, test_set, total_steps):

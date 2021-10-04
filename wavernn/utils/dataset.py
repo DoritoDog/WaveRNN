@@ -1,12 +1,11 @@
 import os
 import pickle
-import random
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torch.utils.data.sampler import Sampler, WeightedRandomSampler, SubsetRandomSampler
+from torch.utils.data.sampler import Sampler, WeightedRandomSampler
 
-from utils.dsp import *
-from utils import hparams as hp
+from wavernn.utils.dsp import *
+from wavernn.utils import hparams as hp
 
 
 class RandomImbalancedSampler(Sampler):
