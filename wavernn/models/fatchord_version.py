@@ -457,20 +457,7 @@ class WaveRNN(nn.Module):
         [m.flatten_parameters() for m in self._to_flatten]
 
     def inference(self, spectrogram, batched=True, n_samples_per_batch=11000, batch_overlap=550, mu_law=True):
-        spectrogram = np.transpose(spectrogram, (1, 0))
-
-        # hard coded min_level_db for now
-        mel = np.clip((spectrogram + 100) / 100, 0, 1)
-
-        if mel.ndim != 2 or mel.shape[0] != self.hparams["feat_dims"]:
-            raise ValueError(f'Expected a numpy array shaped (n_mels, n_hops), but got {mel.shape}!')
-
-        _max = np.max(mel)
-        _min = np.min(mel)
-
-        if _max >= 1.01 or _min <= -0.01:
-            raise ValueError(f'Expected spectrogram range in [0,1] but was instead [{_min}, {_max}]')
-
+        mel = np.transpose(spectrogram, (1, 0))
         mel = torch.tensor(mel).unsqueeze(0)
         return self.generate(
             mel, save_path=None, batched=batched, target=n_samples_per_batch,
