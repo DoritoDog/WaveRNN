@@ -431,7 +431,9 @@ class WaveRNN(nn.Module):
         dct = torch.load(path, map_location=device)
         hparams = dct["hparams"]
         state_dict = dct["weights"]
-        return WaveRNN(**hparams).load_state_dict(state_dict, strict=False)
+        model = WaveRNN(**hparams)
+        model.load_state_dict(state_dict, strict=False)
+        return model
 
     def load(self, path: Union[str, Path]):
         # Use device of model params as location for loaded state
