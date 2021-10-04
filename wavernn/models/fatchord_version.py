@@ -6,6 +6,7 @@ from wavernn.utils.dsp import *
 import numpy as np
 from pathlib import Path
 from typing import Union
+from tqdm import tqdm
 import time
 
 
@@ -213,7 +214,7 @@ class WaveRNN(nn.Module):
             d = self.aux_dims
             aux_split = [aux[:, :, d * i:d * (i + 1)] for i in range(4)]
 
-            for i in range(seq_len):
+            for i in tqdm(range(seq_len)):
 
                 m_t = mels[:, i, :]
 
@@ -253,8 +254,6 @@ class WaveRNN(nn.Module):
                 else:
                     raise RuntimeError("Unknown model mode value - ", self.mode)
 
-                if i % 100 == 0: self.gen_display(i, seq_len, b_size, start)
-
         output = torch.stack(output).transpose(0, 1)
         output = output.cpu().numpy()
         output = output.astype(np.float64)
@@ -278,13 +277,6 @@ class WaveRNN(nn.Module):
         self.train()
 
         return output
-
-
-    def gen_display(self, i, seq_len, b_size, start):
-        gen_rate = (i + 1) / (time.time() - start) * b_size / 1000
-        pbar = progbar(i, seq_len)
-        msg = f'| {pbar} {i*b_size}/{seq_len*b_size} | Batch Size: {b_size} | Gen Rate: {gen_rate:.1f}kHz | '
-        stream(msg)
 
     def get_gru_cell(self, gru):
         gru_cell = nn.GRUCell(gru.input_size, gru.hidden_size)
