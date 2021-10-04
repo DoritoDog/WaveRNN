@@ -430,7 +430,7 @@ class WaveRNN(nn.Module):
     def load_from_checkpoint(cls, path: Path, device: str = 'cpu'):
         dct = torch.load(path, map_location=device)
         hparams = dct["hparams"]
-        state_dict = dct["state_dict"]
+        state_dict = dct["weights"]
         return WaveRNN(**hparams).load_state_dict(state_dict, strict=False)
 
     def load(self, path: Union[str, Path]):
