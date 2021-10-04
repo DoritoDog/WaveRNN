@@ -1,1 +1,1 @@
-#from .models.fatchord_version import WaveRNN
+from .models.fatchord_version import WaveRNN
