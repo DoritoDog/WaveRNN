@@ -5,6 +5,8 @@ project_root = Path(__file__).parent
 
 install_requires = (project_root / 'requirements.txt').read_text().splitlines()
 
+print(find_packages())
+
 setup(
     name="wavernn",
     version="0.0.1",
