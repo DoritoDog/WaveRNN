@@ -1,7 +1,8 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from wavernn.utils.distribution import sample_from_discretized_mix_logistic
-from wavernn.utils import *
+from wavernn.utils.dsp import *
 import numpy as np
 from pathlib import Path
 from typing import Union
@@ -91,6 +92,22 @@ class WaveRNN(nn.Module):
                  feat_dims, compute_dims, res_out_dims, res_blocks,
                  hop_length, sample_rate, mode='RAW'):
         super().__init__()
+
+        self.hparams = dict(
+            rnn_dims=rnn_dims,
+            fc_dims=fc_dims,
+            bits=bits,
+            pad=pad,
+            upsample_factors=upsample_factors,
+            feat_dims=feat_dims,
+            compute_dims=compute_dims,
+            res_out_dims=res_out_dims,
+            res_blocks=res_blocks,
+            hop_length=hop_length,
+            sample_rate=sample_rate,
+            mode=mode,
+        )
+
         self.mode = mode
         self.pad = pad
         if self.mode == 'RAW':
@@ -409,16 +426,28 @@ class WaveRNN(nn.Module):
         with open(path, 'a') as f:
             print(msg, file=f)
 
+    @classmethod
+    def load_from_checkpoint(cls, path: Path, device: str = 'cpu'):
+        dct = torch.load(path, map_location=device)
+        hparams = dct["hparams"]
+        state_dict = dct["state_dict"]
+        return WaveRNN(**hparams).load_state_dict(state_dict, strict=False)
+
     def load(self, path: Union[str, Path]):
         # Use device of model params as location for loaded state
         device = next(self.parameters()).device
-        self.load_state_dict(torch.load(path, map_location=device), strict=False)
+        dct = torch.load(path, map_location=device)
+        self.load_state_dict(dct["weights"], strict=False)
 
     def save(self, path: Union[str, Path]):
         # No optimizer argument because saving a model should not include data
         # only relevant in the training process - it should only be properties
         # of the model itself. Let caller take care of saving optimzier state.
-        torch.save(self.state_dict(), path)
+        dct = {
+            "hparams": self.hparams,
+            "weights": self.state_dict(),
+        }
+        torch.save(dct, path)
 
     def num_params(self, print_out=True):
         parameters = filter(lambda p: p.requires_grad, self.parameters())
