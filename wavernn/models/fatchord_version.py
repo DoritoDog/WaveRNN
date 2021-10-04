@@ -462,6 +462,7 @@ class WaveRNN(nn.Module):
         [m.flatten_parameters() for m in self._to_flatten]
 
     def inference(self, spectrogram, batched=True, n_samples_per_batch=11000, batch_overlap=550, mu_law=True):
+        spectrogram = np.transpose(spectrogram, (1, 0))
         mel = normalize(spectrogram)
 
         if mel.ndim != 2 or mel.shape[0] != self.hparams.feat_dims:
