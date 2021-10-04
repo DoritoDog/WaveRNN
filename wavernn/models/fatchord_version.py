@@ -470,7 +470,7 @@ class WaveRNN(nn.Module):
         # hard coded min_level_db for now
         mel = np.clip((spectrogram + 100) / 100, 0, 1)
 
-        if mel.ndim != 2 or mel.shape[0] != self.hparams.feat_dims:
+        if mel.ndim != 2 or mel.shape[0] != self.hparams["feat_dims"]:
             raise ValueError(f'Expected a numpy array shaped (n_mels, n_hops), but got {mel.shape}!')
 
         _max = np.max(mel)
