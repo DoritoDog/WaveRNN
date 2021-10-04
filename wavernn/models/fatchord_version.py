@@ -460,3 +460,21 @@ class WaveRNN(nn.Module):
         """Calls `flatten_parameters` on all the rnns used by the WaveRNN. Used
         to improve efficiency and avoid PyTorch yelling at us."""
         [m.flatten_parameters() for m in self._to_flatten]
+
+    def inference(self, spectrogram, batched=True, n_samples_per_batch=11000, batch_overlap=550, mu_law=True):
+        mel = normalize(spectrogram)
+
+        if mel.ndim != 2 or mel.shape[0] != self.hparams.feat_dims:
+            raise ValueError(f'Expected a numpy array shaped (n_mels, n_hops), but got {mel.shape}!')
+
+        _max = np.max(mel)
+        _min = np.min(mel)
+
+        if _max >= 1.01 or _min <= -0.01:
+            raise ValueError(f'Expected spectrogram range in [0,1] but was instead [{_min}, {_max}]')
+
+        mel = torch.tensor(mel).unsqueeze(0)
+        return self.generate(
+            mel, save_path=None, batched=batched, target=n_samples_per_batch,
+            overlap=batch_overlap, mu_law=mu_law
+        )
