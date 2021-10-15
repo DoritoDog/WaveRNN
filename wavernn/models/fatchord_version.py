@@ -432,7 +432,8 @@ class WaveRNN(nn.Module):
         # Use device of model params as location for loaded state
         device = next(self.parameters()).device
         dct = torch.load(path, map_location=device)
-        self.load_state_dict(dct["weights"], strict=False)
+        ckpt_weights = dct["weights"] if "weights" in dct else dct
+        self.load_state_dict(ckpt_weights, strict=False)
 
     def save(self, path: Union[str, Path]):
         # No optimizer argument because saving a model should not include data
