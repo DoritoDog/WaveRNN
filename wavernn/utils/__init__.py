@@ -56,8 +56,8 @@ class __HParams:
     def configure(self, path: Union[str, Path]):
         """Configures hparams by copying over atrributes from a module with the
         given path. Raises an exception if already configured."""
-        if self.is_configured():
-            raise RuntimeError("Cannot reconfigure hparams!")
+        # if self.is_configured():
+        #     raise RuntimeError("Cannot reconfigure hparams!")
 
         ###### Check for proper path ######
         if not isinstance(path, Path):
